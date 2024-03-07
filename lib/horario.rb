@@ -23,17 +23,12 @@ class Horario
         programacao =  {}
         arredondamento = 60 / minutos
         num_periodos = periodos.length
-        puts "Num Periodos: #{num_periodos}"
         total_periodos = num_periodos * @dias_uteis
-        puts "Total Periodos: #{num_periodos}"
         var_duracao = dividir_com_variancia(total_horas, total_periodos, variancia, arredondamento)
-        puts "Duração total: #{var_duracao.sum}"
-
-        puts var_duracao.to_s
         i = 0        
         (@inicio_do_mes..@final_do_mes).each do |dia|            
             programacao[dia] ||= []
-            next if [6, 0].include?(dia.wday) || feriados.include?(dia)
+            next if [6, 0].include?(dia.wday) || feriados.include?(dia.day)
             periodos.each do |intervalo|
                 programacao[dia] << gerar_horario(intervalo, dia.day, var_duracao[i], minutos)                
                 i += 1
@@ -45,15 +40,15 @@ class Horario
     private
 
         def dividir_com_variancia(valor_total, num_partes, variancia, arredondamento)
-            distribuir = DistribuirComVariancia.new(valor_total, num_partes, variancia, arredondamento)
-            distribuir.gerar_distribuicao()
+            distribuir = DistribuirComVariancia.new(valor_total, num_partes, variancia)
+            distribuir.gerar_distribuicao(arredondamento)
         end
 
         def contar_dias_uteis()
             total = 0
             data_atual = @inicio_do_mes
             while data_atual <= @final_do_mes
-                unless [6,0].include?(data_atual.wday) || feriados.include?(data_atual)
+                unless [6,0].include?(data_atual.wday) || feriados.include?(data_atual.day)
                     total += 1
                 end
                 data_atual += 1
@@ -82,7 +77,11 @@ class Horario
             intervalo_segundos = segundo_final - segundo_inicial
             duracao_segundos = (duracao_em_horas * 3600).round
             margem_restante_segundos = (intervalo_segundos - duracao_segundos)
-            deslocamento_segundos = (rand * (margem_restante_segundos) / (minutos * 60)).round * (minutos * 60)
+            if margem_restante_segundos > 0
+                deslocamento_segundos = (rand * (margem_restante_segundos) / (minutos * 60)).round * (minutos * 60)
+            else
+                deslocamento_segundos = margem_restante_segundos
+            end
             resultado_tempo_inicial = segundo_para_tempo(segundo_inicial + deslocamento_segundos)
             resultado_tempo_final = segundo_para_tempo(segundo_inicial + deslocamento_segundos + duracao_segundos)
             [resultado_tempo_inicial, resultado_tempo_final]
